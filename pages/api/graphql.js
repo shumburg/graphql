@@ -20,7 +20,7 @@ const typeDefs = gql`
   type User {
     id: ID!
     name: String
-    email: String @auth
+    email: String
   }
   
   type Level {
@@ -50,7 +50,6 @@ const typeDefs = gql`
   type Poi {
     title: String
     author: String
-    date: Date
     oldField: String @deprecated(reason: "Use newField.")
   }
   
@@ -95,7 +94,6 @@ const typeDefs = gql`
   }
 
   type Query {
-    me: User @auth
     books: [Book]
     author: [Author]
     grocerys: [Grocery]
