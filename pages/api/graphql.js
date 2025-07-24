@@ -304,7 +304,7 @@ const resolvers = {
 
       try {
         const [result] = await db.query(
-          'DELETE FROM LEVEL WHERE id=?',
+          'DELETE FROM level WHERE id=?',
           [id]
         );
         return {
