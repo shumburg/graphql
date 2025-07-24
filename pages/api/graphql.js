@@ -34,7 +34,7 @@ export const config = {
   },
 };
 
-const handler = async (req: any, res: any) => {
+const handler = async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.end(); // schnell auf preflight reagieren
     return;
