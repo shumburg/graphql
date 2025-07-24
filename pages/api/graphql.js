@@ -2,6 +2,8 @@
 import { ApolloServer, gql } from 'apollo-server-micro';
 import Cors from 'micro-cors';
 
+const db = require('./db');
+
 const cors = Cors({
   origin: '*', 
   allowMethods: ['POST', 'GET', 'OPTIONS'],
