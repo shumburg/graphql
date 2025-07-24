@@ -2,7 +2,7 @@
 import { ApolloServer, gql } from 'apollo-server-micro';
 import Cors from 'micro-cors';
 
-//const db = require('./db');
+
 import * as db from './db';
 
 console.log(db);
