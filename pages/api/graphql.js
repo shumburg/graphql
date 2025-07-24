@@ -3,9 +3,8 @@ import { ApolloServer, gql } from 'apollo-server-micro';
 import Cors from 'micro-cors';
 
 
-import * as db from './db';
+import db from './db';
 
-console.log(db);
 
 const cors = Cors({
   origin: '*', 
