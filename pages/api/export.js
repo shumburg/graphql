@@ -7,10 +7,10 @@ import db from './db';
 
 
 const cors = Cors({
-  origin: '*',
+  origin: '*', 
   allowMethods: ['POST', 'GET', 'OPTIONS'],
   allowHeaders: ['Content-Type'],
-  allowCredentials: false,
+  allowCredentials: true,
 });
 
 
@@ -40,33 +40,22 @@ const typeDefs = gql`
     state: Int
   }
   
-  type Rating {
-    user_id: Int!
-    level_id: Int!
-    rating: Float!
-  }
-  
   type Level {
     id: ID!
     levelstr: String!
     bonustime: Int!
     proofed: Int!
     levelType: String!
-    sort_order: Int!
-    bookmarked: Boolean!
-    ratings: Rating
-    ratingAverage: Int!
   }
   
   type Highscore {
     id: ID!
     score: Int!
     user: User!
-    date: String!
+    datum: String!
   }
 
   type Book {
-    id: ID!
     title: String
     vendor: Author
   }
@@ -143,7 +132,6 @@ const typeDefs = gql`
     getStalls: [Stall!]!
     fruitsById(id: ID!): Fruits
     search(query: String): [SearchResult!]
-    searchFruit(query: String): [Fruits!]
     userLogin(input: UserInput): UserLogin
   }
  
@@ -155,11 +143,8 @@ const typeDefs = gql`
     addAnswer(input: AnswerContent): Answer
     addHighscore(input: HighscoreInput): Highscore
     updateLevel(input: LevelInput): Level
-    updateLevelOrder(input: LevelListInput): [Level]
-    updateRating(input: RatingInput): Rating
     registerUser(input: UserInput): UserRegister
     deleteLevel(input: LevelIdInput): Level
-    deleteBook(id: ID): Book
     updateFruitPrice(input: UpdateFruitPriceInput): Fruits
   }
   
@@ -180,7 +165,7 @@ const typeDefs = gql`
   
   input HighscoreInput {
     score: Int
-    user_id: String
+    name: String
   }
   
   input AnswerContent {
@@ -196,12 +181,6 @@ const typeDefs = gql`
     name: String
     stallNumber: String
   }
-
-  input RatingInput {
-      user_id: Int!
-      level_id: Int!
-      rating: Float!
-  }
   
   input LevelInput {
     id: Int
@@ -209,14 +188,6 @@ const typeDefs = gql`
     bonustime: Int
     proofed: Int
     levelType: String
-    sort_order: Int
-    bookmarked: Boolean
-    ratings: [RatingInput]
-    ratingAverage: Float
-  }
-  
-  input LevelListInput {
-     levels : [LevelInput!]
   }
   
   input LevelIdInput {
@@ -226,9 +197,9 @@ const typeDefs = gql`
 
 
 // Beispiel-Daten
-let books = [
-  { id: "1", title: 'Harry Potter 2', vendorId: "1" },
-  { id: "2", title: 'Herr der Ringe', vendorId: "2" }
+const books = [
+  { title: 'Harry Potter 2', vendorId: "1" },
+  { title: 'Herr der Ringe', vendorId: "2" }
 ];
 
 const author = [
@@ -270,11 +241,11 @@ const resolvers = {
       return rows;
     },
     levels: async (parent, args, context, info) => {
-      const [rows] = await db.query('SELECT * FROM level order by sort_order');
+      const [rows] = await db.query('SELECT * FROM level');
       return rows;
     },
     highscore: async (parent, args, context, info) => {
-      const [rows] = await db.query('SELECT highscore.id, highscore.score, DATE_FORMAT(highscore.datum, \'%d-%m-%Y %H:%i\') as date, user.username FROM highscore, user WHERE highscore.user_id = user.id');
+      const [rows] = await db.query('SELECT highscore.id, highscore.score, highscore.datum, user.username FROM highscore, user WHERE highscore.user_id = user.id');
       const sorted = rows.sort((a, b) => b.score - a.score);
       return sorted.map((row) => {row.user = {username: row.username}; return row;});
     },
@@ -288,7 +259,7 @@ const resolvers = {
     },
     getStalls: async (parent, args, context, info) => {
       const [rows] = await db.query('SELECT * FROM stall');
-      //console.log(rows);
+      console.log(rows);
       return rows;
     },
     books: () => books,
@@ -303,9 +274,6 @@ const resolvers = {
       const resultFruits = fruits.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
       const resultVegetables = vegetables.filter(v => v.name.toLowerCase().includes(query.toLowerCase()));
       return [...resultFruits, ...resultVegetables];
-    },
-    searchFruit: (_, { query }) => {
-      return fruits.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
     },
   },
 
@@ -334,7 +302,7 @@ const resolvers = {
   },
 
   Book: {
-    vendor: (book) => { return author.find(author => { return parseInt(book.vendorId) === parseInt(author.id) } ) },
+    vendor: (book) => author.find(author => book.vendorId === author.id),
   },
 
   Fruits: {
@@ -347,70 +315,8 @@ const resolvers = {
     }
   },
   Mutation: {
-    updateLevelOrder: async (_, { input }) => {
-      const { levels } = input;
-
-      try {
-        for (let i = 0; i < levels.length; i++) {
-          const level = levels[i];
-
-          await db.query(
-            'UPDATE level SET sort_order = ? WHERE id = ?',
-            [i, level.id]
-          );
-        }
-
-        const [rows] = await db.query(
-          'SELECT * FROM level ORDER BY sort_order'
-        );
-
-        return rows;
-      } catch (error) {
-        console.error('Fehler beim Aktualisieren der Reihenfolge:', error);
-        throw new Error('Fehler beim Aktualisieren der Reihenfolge');
-      }
-    },
-
-    updateRating: async (_, { input }) => {
-      const { user_id, level_id, rating } = input;
-
-      try {
-        await db.query(
-          'INSERT INTO rating (user_id, level_id, rating) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE rating = ?',
-          [user_id, level_id, rating, rating]
-        );
-      } catch (error) {
-        console.error('Fehler beim Aktualisieren der Bewertung:', error);
-        throw new Error('Fehler beim Aktualisieren der Bewertung');
-      }
-
-      return {
-        user_id,
-        level_id,
-        rating
-      };
-    },
-
     updateLevel: async (_, { input }) => {
-      const { id, ratings, ratingAverage, ...fields } = input;
-      console.log(fields);
-
-      // Wenn ratings und ratingAverage vorhanden sind, in die Tabelle rating schreiben/updaten
-      // Duplikate basierend auf user_id + level_id werden aktualisiert
-      if (ratings && ratingAverage !== undefined) {
-        try {
-          for (const rating of ratings) {
-            await db.query(
-              'INSERT INTO rating (user_id, level_id, rating) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE rating = ?',
-              [rating.user, id, rating.rating, rating.rating]
-            );
-          }
-        } catch (error) {
-          console.error('Fehler beim Einfügen/Aktualisieren der Ratings:', error);
-          throw new Error('Fehler beim Einfügen/Aktualisieren der Ratings');
-        }
-      }
-
+      const { id, ...fields } = input;
       if (Object.keys(fields).length === 0) {
         throw new Error('Keine Felder zum Aktualisieren übergeben.');
       }
@@ -422,7 +328,6 @@ const resolvers = {
         sqlParts.push(`${key} = ?`);
         values.push(fields[key]);
       }
-
 
       const sql = `UPDATE level SET ${sqlParts.join(', ')} WHERE id = ?`;
       values.push(id);
@@ -455,24 +360,19 @@ const resolvers = {
     },
 
     addLevel: async (_, { input }) => {
-      const { levelstr, bonustime, proofed, levelType, bookmarked } = input;
-
+      const { levelstr, bonustime, proofed, levelType } = input;
 
       try {
-        const [res] = await db.query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_sort_order FROM level');
         const [result] = await db.query(
-          'INSERT INTO level (levelstr, bonustime, proofed, levelType, sort_order, bookmarked) VALUES (?, ?, ?, ?, ?, ?)',
-          [levelstr, bonustime, proofed, levelType, res[0].next_sort_order, bookmarked]
+          'INSERT INTO level (levelstr, bonustime, proofed, levelType) VALUES (?, ?, ?, ?)',
+          [levelstr, bonustime, proofed, levelType]
         );
-
         return {
           id: result.insertId,
           levelstr: levelstr,
           bonustime: bonustime,
           proofed: proofed,
           levelType: levelType,
-          sort_order: res[0].next_sort_order,
-          bookmarked: bookmarked
         };
       } catch (error) {
         console.error('Fehler beim Einfügen des Levels:', error);
@@ -481,12 +381,12 @@ const resolvers = {
     },
 
     updateFruitPrice: async (_, { input }) => {
+      console.log(input);
       fruits.map((f)=> { if(f.id === input.id){f.price = input.price;} return f; });
-      const fruit = fruits.filter(fruit => fruit.id !== input.id);
       console.log(fruits);
       return {
         id: input.id,
-        name: fruit[0].name,
+        name: "nams",
         price: input.price,
       }
     },
@@ -508,54 +408,22 @@ const resolvers = {
       }
     },
 
-    deleteBook: async (_, { id }) => {
-      books = books.filter(book => { console.log(id, book.id); return book.id !== id} );
-
-      return {
-        id: id
-      }
-    },
-
     addHighscore: async (_, { input }) => {
-      const { score, user_id } = input;
-
-      const now = new Date()
-        .toISOString()
-        .slice(0, 19)
-        .replace('T', ' ');
-
-      const query =
-        'INSERT INTO highscore (score, user_id, datum) VALUES (?, ?, ?)';
-
-      const query_user =
-        'SELECT id, username FROM user WHERE id = ?';
-
-      const [result_user] = await db.query(query_user, [user_id]);
-
-      if (result_user.length === 0) {
-        throw new Error('User nicht gefunden');
-      }
-
+      const { score, name } = input;
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const query = 'INSERT INTO highscore (score, name, datum) VALUES (?, ?, ?)';
       try {
-        const [result] = await db.query(query, [
-          score,
-          user_id,
-          now,
-        ]);
-
+        const [result] = await db.query(
+          query,
+          [score, name, now]
+        );
         return {
           id: result.insertId,
-          score,
-          user: {
-            id: result_user[0].id,
-            username: result_user[0].username,
-          },
-          datum: now,
+          score: score,
+          name: name,
         };
       } catch (error) {
-        throw new Error(
-          'Fehler beim Eintragen des Highscores: ' + error
-        );
+        throw new Error('Fehler beim Eintragen des Highscores' +error);
       }
     },
 
@@ -576,15 +444,14 @@ const resolvers = {
       };
       books.push(newBook);
 
-      return newBook;
 
-      /*return {
+      return {
         title,
         vendor: {
           firstname,
           lastname
         }
-      };*/
+      };
     },
     registerUser: async (_,{input} ) => {
       const {username, password} = input;
