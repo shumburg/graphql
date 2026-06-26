@@ -54,8 +54,8 @@ const typeDefs = gql`
     levelType: String!
     sort_order: Int!
     bookmarked: Boolean!
-    ratings: Rating
-    ratingAverage: Int!
+    ratings: [Rating]
+    ratingAverage: Float!
   }
   
   type Highscore {
@@ -270,8 +270,29 @@ const resolvers = {
       return rows;
     },
     levels: async (parent, args, context, info) => {
-      const [rows] = await db.query('SELECT * FROM level order by sort_order');
-      return rows;
+      const [levels] = await db.query('SELECT * FROM level order by sort_order');
+      
+      // Alle Ratings auf einmal laden
+      const [allRatings] = await db.query('SELECT level_id, user_id as user, rating FROM rating');
+
+      
+      // Ratings in ein Objekt gruppieren: { level_id: [ratings] }
+      const ratingsMap = {};
+      allRatings.forEach(rating => {
+        if (!ratingsMap[rating.level_id]) {
+          ratingsMap[rating.level_id] = [];
+        }
+        ratingsMap[rating.level_id].push({ user_id: rating.user, rating: rating.rating });
+      });
+
+      
+      // Ratings zu Levels zuordnen
+      levels.forEach(level => {
+        level.ratings = ratingsMap[level.id] || [];
+        level.ratingAverage = level.ratings.reduce((sum, rating) => sum + rating.rating, 0) / (level.ratings.length || 1);
+      });
+      
+      return levels;
     },
     highscore: async (parent, args, context, info) => {
       const [rows] = await db.query('SELECT highscore.id, highscore.score, DATE_FORMAT(highscore.datum, \'%d-%m-%Y %H:%i\') as date, user.username FROM highscore, user WHERE highscore.user_id = user.id');
