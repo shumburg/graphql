@@ -1,6 +1,6 @@
 {
   "name": "graphql-server-vercel",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "scripts": {
@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "apollo-server-micro": "^3.13.0",
+    "axios": "^1.11.0",
+    "basic-ftp": "^5.0.5",
     "graphql": "^16.11.0",
     "micro-cors": "^0.1.1",
     "mysql2": "^3.14.0",
-    "next": "15.4.3",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -24,7 +26,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.4.3",
+    "eslint-config-next": "^16.2.9",
     "typescript": "^5"
   }
 }
