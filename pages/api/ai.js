@@ -10,7 +10,32 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://humburg.net/",
+];
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Requests ohne Origin (z. B. Postman oder Server-zu-Server) erlauben
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS: Origin nicht erlaubt"));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+
 app.use(express.json());
 
 app.listen(3000, () => {
